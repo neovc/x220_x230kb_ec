@@ -1,0 +1,86 @@
+#!/bin/sh
+#
+# Copyright (C) 2017-2019 Hamish Coleman
+#
+# Deal with copying the FL2 file from and to the ISO image
+#
+
+# All the bios update iso images I have checked have had a fat16 filesystem
+# embedded in a dos mbr image as the el-torito ISO payload.  They also all
+# had the same offset to this fat filesystem, so hardcode that offset here.
+# The offset value is bytes in decimal.
+# TODO - one day, this offset will be wrong.  (geteltorito could be taught
+# to output the starting sector it found as a starting point)
+FAT_OFFSET=71680
+
+DIR="$1"
+case "$DIR" in
+    from_iso) ;;
+    to_iso)   ;;
+    ls)       ;;
+    *)
+        echo direction is either from_iso, to_iso or ls
+        exit 1
+        ;;
+esac
+shift
+
+ISO="$1"
+if [ ! -e "$ISO" ]; then
+    echo iso file must exist
+    exit 1
+fi
+shift
+
+if ! which mdir >/dev/null; then
+    echo Fatal:  It looks like you have not installed the mtools package
+    exit 1
+fi
+
+# If we just want to look at the contents, do that
+if [ "$DIR" = "ls" ]; then
+    mdir -i "$ISO"@@"$FAT_OFFSET" -/ -b
+    exit
+fi
+
+# The "external" filename - used in the linux filesystem
+FILENAME="$1"
+if [ -z "$FILENAME" ]; then
+    echo need linux filename
+    exit 1
+fi
+shift
+
+# The "internal" filename pattern to match - used in the BIOS update image
+INTPATTERN="$1"
+if [ -z "$INTPATTERN" ]; then
+    echo need to specify the pattern to match the internal filenames with
+    exit 1
+fi
+
+
+MATCH=$(mdir -i "$ISO"@@"$FAT_OFFSET" -/ -b |grep "$INTPATTERN")
+if [ -z "$MATCH" ]; then
+    echo "Error: could not find any files in $ISO matching $INTPATTERN"
+    exit 1
+fi
+if [ "$(echo "$MATCH" |wc -w)" -ne 1 ]; then
+    echo "Error: $ISO has more than one matching file:"
+    echo "$MATCH"
+    exit 1
+fi
+
+from_iso() {
+    mcopy -n -i "$ISO"@@"$FAT_OFFSET" "$MATCH" "$FILENAME"
+}
+
+to_iso() {
+    if [ ! -f "$FILENAME" ]; then
+        echo "Error: $FILENAME must exist"
+        exit 1
+    fi
+    mcopy -m -o -i "$ISO"@@"$FAT_OFFSET" "$FILENAME" "$MATCH"
+}
+
+$DIR
+

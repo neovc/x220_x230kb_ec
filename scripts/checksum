@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# Copyright (C) 2017-2019 Hamish Coleman
+#
+# Look up the given filename in the description file and confirm that
+# the checksum matches
+#
+# FIXME
+# - the description file is expected to be in the current dir
+# - does not handle description file entries with more than just the sha1 tag
+
+DESCRIPTIONS='Descriptions.txt'
+
+if [ "$1" = "--mv_on_fail" ]; then
+    MV_ON_FAIL=yes
+    shift
+elif [ "$1" = "--rm_on_fail" ]; then
+    RM_ON_FAIL=yes
+    shift
+fi
+
+FILE="$1"
+if [ -z "$FILE" ]; then
+    echo "Need filename" 2>&1
+    exit 1
+fi
+shift
+
+# The name of the Descriptions.txt entry to use
+CHECKNAME="$1"
+if [ -z "$CHECKNAME" ]; then
+    # default to the same as the filename
+    CHECKNAME="$FILE"
+fi
+
+do_exit_fail() {
+    if [ "$MV_ON_FAIL" ]; then
+        BADNAME="${FILE}.bad"
+        echo "ERROR: moved file to $BADNAME" 2>&1
+        mv -f "$FILE" "$BADNAME"
+    elif [ "$RM_ON_FAIL" ]; then
+        echo "ERROR: removed file" 2>&1
+        rm -f "$FILE"
+    fi
+    exit 1
+}
+
+if ! LINE=$(grep -E "^$CHECKNAME " "$DESCRIPTIONS"); then
+    echo "Unknown file $CHECKNAME" 2>&1
+    do_exit_fail
+fi
+
+if [ ! -e "$FILE" ]; then
+    echo "File $FILE does not exist" 2>&1
+    do_exit_fail
+fi
+
+SUM_FIELD=$(echo "$LINE" | awk -- '{print $2}')
+
+TYPE=$(echo "$SUM_FIELD" | cut -d: -f1)
+EXPECT=$(echo "$SUM_FIELD" | cut -d: -f2 |tr '[:upper:]' '[:lower:]')
+
+case "$TYPE" in
+    sha1)
+        GOT=$(sha1sum "$FILE" | cut -d" " -f1)
+        ;;
+    sha256)
+        GOT=$(sha256sum "$FILE" | cut -d" " -f1)
+        ;;
+    *)
+        echo "Unknown checksum type $TYPE for $CHECKNAME" 2>&1
+        do_exit_fail
+        ;;
+esac
+
+if [ "$EXPECT" != "$GOT" ]; then
+    echo "File $FILE failed checksum check" 2>&1
+
+    do_exit_fail
+fi
+
+exit 0
+

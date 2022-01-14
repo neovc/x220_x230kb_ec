@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Quick and dirty encryptor
+# Copyright (C) 2016-2019 Hamish Coleman
+#
+# TODO:
+# - a tool that is portable to Windows
+# - should output dependency information
+
+INP="$1"
+if [ -z "$INP" ]; then
+    echo Need input filename
+    exit 1
+fi
+shift
+
+OUT="$1"
+if [ -z "$OUT" ]; then
+    echo Need output filename
+    exit 1
+fi
+shift
+
+set -x
+
+cd mec-tools && ./mec_repack "../$INP" "../$OUT"
+
