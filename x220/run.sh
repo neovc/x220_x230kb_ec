@@ -3,6 +3,7 @@ if [ -f x220/8duj31us.iso.orig ]; then
 	cp -f x220/8duj31us.iso.orig 8duj31us.iso.orig
 else
 	wget -O 8duj31us.iso.orig https://download.lenovo.com/pccbbs/mobiles/8duj31us.iso
+	cp -f 8duj31us.iso.orig x220/8duj31us.iso.orig
 fi
 
 cp -f 8duj31us.iso.orig 8duj31us.iso.tmp
