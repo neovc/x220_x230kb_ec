@@ -13,9 +13,13 @@ cp -f 8duj31us.iso.orig 8duj31us.iso.tmp
 cp -f x220.FL2.orig x220.FL2.tmp
 cp -f x220.ec.img.tmp x220.ec.img.orig
 
+./mec-tools/mec_csum_outer -c x220.ec.img.tmp
+
 ./scripts/hexpatch.pl --rm_on_fail --fail_on_missing --report x220.report x220.ec.img.tmp x220/001_keysym.patch x220/002_dead_keys.patch x220/003_keysym_replacements.patch
 
-./scripts/FL2_copyIMG to_fl2 x220.FL2.tmp x220.img.tmp
+./mec-tools/mec_csum_outer -f x220.ec.img.tmp
+
+./scripts/FL2_copyIMG to_fl2 x220.FL2.tmp x220.ec.img.tmp
 
 ./scripts/ISO_copyFL2 to_iso 8duj31us.iso.tmp x220.FL2.tmp 01CB000.FL2
 
